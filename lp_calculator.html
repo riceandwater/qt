@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linear Programming Solver</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #0066ff;
+            --primary-dark: #0052cc;
+            --bg-dark: #0a0e27;
+            --bg-card: #151a35;
+            --bg-input: #1e2441;
+            --text-primary: #e8eaed;
+            --text-secondary: #9aa0b8;
+            --accent: #00d4aa;
+            --accent-glow: rgba(0, 212, 170, 0.3);
+            --border: #2a3147;
+            --error: #ff4757;
+            --success: #2ed573;
+        }
+
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.15;
+            background: 
+                radial-gradient(circle at 20% 30%, var(--primary) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, var(--accent) 0%, transparent 50%);
+            animation: pulse 8s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.15; }
+            50% { opacity: 0.25; }
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding-top: 2rem;
+            animation: fadeInDown 0.6s ease-out;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            animation: fadeIn 0.8s ease-out 0.2s both;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 2rem;
+            border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 102, 255, 0.1);
+            border-color: var(--primary);
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .icon {
+            width: 24px;
+            height: 24px;
+            display: inline-block;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            background: var(--bg-input);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(0, 102, 255, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .input-hint {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 0.3rem;
+            font-style: italic;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 100%;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 102, 255, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .result-container {
+            background: var(--bg-input);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            border: 2px solid var(--border);
+        }
+
+        .result-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .result-content {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            color: var(--text-primary);
+        }
+
+        .solution-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--success);
+            margin: 0.5rem 0;
+        }
+
+        .steps-container {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .step {
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            background: rgba(0, 102, 255, 0.05);
+            border-radius: 8px;
+            border-left: 3px solid var(--primary);
+        }
+
+        .step-number {
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.3rem;
+        }
+
+        .error-message {
+            background: rgba(255, 71, 87, 0.1);
+            color: var(--error);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 3px solid var(--error);
+            margin-top: 1rem;
+        }
+
+        .example-section {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: rgba(0, 212, 170, 0.05);
+            border-radius: 12px;
+            border: 1px dashed var(--accent);
+        }
+
+        .example-title {
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        .example-text {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .matrix-display {
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+        }
+
+        th, td {
+            padding: 0.5rem;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+
+        th {
+            background: var(--bg-input);
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        td {
+            background: rgba(0, 102, 255, 0.02);
+        }
+
+        .highlight {
+            background: rgba(0, 212, 170, 0.15) !important;
+            font-weight: 600;
+        }
+
+        @media (max-width: 968px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 2.5rem;
+            }
+        }
+
+        .loader {
+            display: none;
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 1rem auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading .loader {
+            display: block;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: rgba(0, 212, 170, 0.2);
+            color: var(--accent);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-animation"></div>
+    
+    <div class="container">
+        <header>
+            <h1>LP Solver</h1>
+            <p class="subtitle">Linear Programming Optimization Engine</p>
+        </header>
+
+        <div class="main-grid">
+            <!-- Input Section -->
+            <div class="card">
+                <h2 class="card-title">
+                    <svg class="icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                        <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
+                    </svg>
+                    Problem Input
+                </h2>
+
+                <form id="lpForm">
+                    <div class="form-group">
+                        <label for="optimization">Optimization Type</label>
+                        <select id="optimization" required>
+                            <option value="maximize">Maximize</option>
+                            <option value="minimize">Minimize</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="objective">Objective Function</label>
+                        <input type="text" id="objective" placeholder="3x + 5y" required>
+                        <div class="input-hint">Enter coefficients with variables (e.g., 3x + 5y or 2x1 + 4x2)</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="constraints">Constraints</label>
+                        <textarea id="constraints" placeholder="2x + 3y <= 12&#10;x + 2y <= 8&#10;x >= 0&#10;y >= 0" required></textarea>
+                        <div class="input-hint">One constraint per line. Use &lt;=, &gt;=, or = operators</div>
+                    </div>
+
+                    <button type="submit" class="btn">
+                        <span>Solve Problem</span>
+                    </button>
+                </form>
+
+                <div class="example-section">
+                    <div class="example-title">📝 Example Problem</div>
+                    <div class="example-text">Maximize: 3x + 5y
+Subject to:
+  2x + 3y ≤ 12
+  x + 2y ≤ 8
+  x ≥ 0, y ≥ 0</div>
+                </div>
+            </div>
+
+            <!-- Output Section -->
+            <div class="card">
+                <h2 class="card-title">
+                    <svg class="icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    Solution
+                    <span class="badge">Simplex Method</span>
+                </h2>
+
+                <div id="resultArea">
+                    <div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+                        <svg style="width: 64px; height: 64px; margin-bottom: 1rem; opacity: 0.3;" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                            <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm9.707 5.707a1 1 0 00-1.414-1.414L9 12.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                        <p>Enter a linear programming problem and click "Solve Problem" to see the solution here.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class SimplexSolver {
+            constructor() {
+                this.tableau = [];
+                this.basicVars = [];
+                this.nonBasicVars = [];
+                this.steps = [];
+            }
+
+            parseObjective(objStr) {
+                const terms = objStr.match(/([+-]?\s*\d*\.?\d*)\s*([a-z]\d*)/gi);
+                const coeffs = {};
+                
+                if (!terms) throw new Error("Invalid objective function format");
+                
+                terms.forEach(term => {
+                    const match = term.match(/([+-]?\s*\d*\.?\d*)\s*([a-z]\d*)/i);
+                    if (match) {
+                        let coeff = match[1].replace(/\s/g, '');
+                        if (coeff === '' || coeff === '+') coeff = '1';
+                        else if (coeff === '-') coeff = '-1';
+                        const variable = match[2].toLowerCase();
+                        coeffs[variable] = parseFloat(coeff);
+                    }
+                });
+                
+                return coeffs;
+            }
+
+            parseConstraints(constraintsStr) {
+                const lines = constraintsStr.trim().split('\n');
+                const constraints = [];
+                
+                lines.forEach(line => {
+                    line = line.trim();
+                    if (!line) return;
+                    
+                    const operators = ['<=', '>=', '='];
+                    let operator = null;
+                    let parts = null;
+                    
+                    for (let op of operators) {
+                        if (line.includes(op)) {
+                            operator = op;
+                            parts = line.split(op);
+                            break;
+                        }
+                    }
+                    
+                    if (!operator || !parts || parts.length !== 2) {
+                        throw new Error(`Invalid constraint format: ${line}`);
+                    }
+                    
+                    const lhs = this.parseObjective(parts[0]);
+                    const rhs = parseFloat(parts[1].trim());
+                    
+                    constraints.push({ lhs, operator, rhs });
+                });
+                
+                return constraints;
+            }
+
+            solve(objective, constraints, isMaximize) {
+                this.steps = [];
+                
+                // Get all variables
+                const allVars = new Set();
+                Object.keys(objective).forEach(v => allVars.add(v));
+                constraints.forEach(c => Object.keys(c.lhs).forEach(v => allVars.add(v)));
+                const variables = Array.from(allVars).sort();
+                
+                this.steps.push(`Problem Setup:\n${isMaximize ? 'Maximize' : 'Minimize'}: Z = ${this.formatObjective(objective, variables)}\nSubject to:`);
+                constraints.forEach((c, i) => {
+                    this.steps.push(`  ${this.formatConstraint(c, variables)}`);
+                });
+                
+                // Convert to standard form
+                let slackCount = 0;
+                const standardConstraints = [];
+                
+                constraints.forEach(c => {
+                    const newConstraint = { ...c.lhs };
+                    
+                    if (c.operator === '<=') {
+                        const slackVar = `s${++slackCount}`;
+                        newConstraint[slackVar] = 1;
+                    } else if (c.operator === '>=') {
+                        const slackVar = `s${++slackCount}`;
+                        newConstraint[slackVar] = -1;
+                    }
+                    
+                    standardConstraints.push({ lhs: newConstraint, rhs: c.rhs });
+                });
+                
+                // Build initial tableau
+                const allVariables = [...variables];
+                for (let i = 1; i <= slackCount; i++) {
+                    allVariables.push(`s${i}`);
+                }
+                
+                this.tableau = [];
+                
+                // Add constraint rows
+                standardConstraints.forEach(c => {
+                    const row = [];
+                    allVariables.forEach(v => {
+                        row.push(c.lhs[v] || 0);
+                    });
+                    row.push(c.rhs);
+                    this.tableau.push(row);
+                });
+                
+                // Add objective row (negate for maximization)
+                const objRow = [];
+                allVariables.forEach(v => {
+                    const coeff = objective[v] || 0;
+                    objRow.push(isMaximize ? -coeff : coeff);
+                });
+                objRow.push(0);
+                this.tableau.push(objRow);
+                
+                this.steps.push(`\nInitial Simplex Tableau:`);
+                this.steps.push(this.tableauToString(allVariables));
+                
+                // Simplex iterations
+                let iteration = 0;
+                const maxIterations = 50;
+                
+                while (iteration < maxIterations) {
+                    iteration++;
+                    
+                    // Find entering variable (most negative in objective row)
+                    const objRow = this.tableau[this.tableau.length - 1];
+                    let pivotCol = -1;
+                    let minValue = 0;
+                    
+                    for (let j = 0; j < objRow.length - 1; j++) {
+                        if (objRow[j] < minValue) {
+                            minValue = objRow[j];
+                            pivotCol = j;
+                        }
+                    }
+                    
+                    if (pivotCol === -1) {
+                        this.steps.push(`\n✓ Optimal solution found (all coefficients non-negative)`);
+                        break;
+                    }
+                    
+                    // Find leaving variable (minimum ratio test)
+                    let pivotRow = -1;
+                    let minRatio = Infinity;
+                    
+                    for (let i = 0; i < this.tableau.length - 1; i++) {
+                        if (this.tableau[i][pivotCol] > 0) {
+                            const ratio = this.tableau[i][this.tableau[i].length - 1] / this.tableau[i][pivotCol];
+                            if (ratio >= 0 && ratio < minRatio) {
+                                minRatio = ratio;
+                                pivotRow = i;
+                            }
+                        }
+                    }
+                    
+                    if (pivotRow === -1) {
+                        throw new Error("Unbounded solution");
+                    }
+                    
+                    this.steps.push(`\nIteration ${iteration}:`);
+                    this.steps.push(`Entering variable: ${allVariables[pivotCol]}`);
+                    this.steps.push(`Leaving variable: Basic variable at row ${pivotRow + 1}`);
+                    this.steps.push(`Pivot element: ${this.tableau[pivotRow][pivotCol].toFixed(2)} at position (${pivotRow + 1}, ${pivotCol + 1})`);
+                    
+                    // Perform pivot operation
+                    const pivotValue = this.tableau[pivotRow][pivotCol];
+                    
+                    // Normalize pivot row
+                    for (let j = 0; j < this.tableau[pivotRow].length; j++) {
+                        this.tableau[pivotRow][j] /= pivotValue;
+                    }
+                    
+                    // Eliminate pivot column in other rows
+                    for (let i = 0; i < this.tableau.length; i++) {
+                        if (i !== pivotRow) {
+                            const factor = this.tableau[i][pivotCol];
+                            for (let j = 0; j < this.tableau[i].length; j++) {
+                                this.tableau[i][j] -= factor * this.tableau[pivotRow][j];
+                            }
+                        }
+                    }
+                    
+                    this.steps.push(`\nTableau after iteration ${iteration}:`);
+                    this.steps.push(this.tableauToString(allVariables));
+                }
+                
+                // Extract solution
+                const solution = {};
+                variables.forEach(v => solution[v] = 0);
+                
+                for (let j = 0; j < allVariables.length; j++) {
+                    let isBasic = true;
+                    let basicRow = -1;
+                    
+                    for (let i = 0; i < this.tableau.length - 1; i++) {
+                        if (Math.abs(this.tableau[i][j] - 1) < 1e-6) {
+                            if (basicRow !== -1) {
+                                isBasic = false;
+                                break;
+                            }
+                            basicRow = i;
+                        } else if (Math.abs(this.tableau[i][j]) > 1e-6) {
+                            isBasic = false;
+                            break;
+                        }
+                    }
+                    
+                    if (isBasic && basicRow !== -1) {
+                        const varName = allVariables[j];
+                        if (variables.includes(varName)) {
+                            solution[varName] = this.tableau[basicRow][this.tableau[basicRow].length - 1];
+                        }
+                    }
+                }
+                
+                const objValue = -this.tableau[this.tableau.length - 1][this.tableau[0].length - 1];
+                
+                return {
+                    solution,
+                    objectiveValue: isMaximize ? objValue : -objValue,
+                    steps: this.steps,
+                    variables
+                };
+            }
+
+            formatObjective(obj, vars) {
+                return vars.map(v => {
+                    const coeff = obj[v] || 0;
+                    if (coeff === 0) return '';
+                    const sign = coeff > 0 ? '+' : '';
+                    return `${sign}${coeff}${v}`;
+                }).filter(s => s).join(' ');
+            }
+
+            formatConstraint(c, vars) {
+                const lhs = vars.map(v => {
+                    const coeff = c.lhs[v] || 0;
+                    if (coeff === 0) return '';
+                    const sign = coeff > 0 ? '+' : '';
+                    return `${sign}${coeff}${v}`;
+                }).filter(s => s).join(' ');
+                return `${lhs} ${c.operator} ${c.rhs}`;
+            }
+
+            tableauToString(vars) {
+                let result = '\n';
+                const colWidth = 10;
+                
+                // Header
+                result += 'Basis'.padEnd(colWidth);
+                vars.forEach(v => {
+                    result += v.padEnd(colWidth);
+                });
+                result += 'RHS'.padEnd(colWidth) + '\n';
+                result += '-'.repeat((vars.length + 2) * colWidth) + '\n';
+                
+                // Rows
+                for (let i = 0; i < this.tableau.length; i++) {
+                    result += (i < this.tableau.length - 1 ? `Row ${i + 1}` : 'Z').padEnd(colWidth);
+                    this.tableau[i].forEach(val => {
+                        result += val.toFixed(2).padEnd(colWidth);
+                    });
+                    result += '\n';
+                }
+                
+                return result;
+            }
+        }
+
+        document.getElementById('lpForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const resultArea = document.getElementById('resultArea');
+            resultArea.innerHTML = '<div class="loader"></div>';
+            resultArea.classList.add('loading');
+            
+            try {
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                const optimization = document.getElementById('optimization').value;
+                const objectiveStr = document.getElementById('objective').value;
+                const constraintsStr = document.getElementById('constraints').value;
+                
+                const solver = new SimplexSolver();
+                const objective = solver.parseObjective(objectiveStr);
+                const constraints = solver.parseConstraints(constraintsStr);
+                const isMaximize = optimization === 'maximize';
+                
+                const result = solver.solve(objective, constraints, isMaximize);
+                
+                let html = '<div class="result-container">';
+                html += '<div class="result-title">✓ Optimal Solution Found</div>';
+                html += `<div class="solution-value">${optimization === 'maximize' ? 'Maximum' : 'Minimum'} value: Z = ${result.objectiveValue.toFixed(4)}</div>`;
+                html += '<div class="result-content"><strong>Decision Variables:</strong>\n';
+                
+                result.variables.forEach(v => {
+                    html += `${v} = ${result.solution[v].toFixed(4)}\n`;
+                });
+                
+                html += '\n<strong>Verification:</strong>\n';
+                html += `Z = ${result.variables.map(v => `${(objective[v] || 0).toFixed(2)}(${result.solution[v].toFixed(2)})`).join(' + ')}\n`;
+                let sum = 0;
+                result.variables.forEach(v => sum += (objective[v] || 0) * result.solution[v]);
+                html += `Z = ${sum.toFixed(4)}`;
+                
+                html += '</div></div>';
+                
+                // Add solution steps
+                html += '<div class="steps-container">';
+                html += '<div class="result-title">📊 Solution Steps</div>';
+                result.steps.forEach((step, idx) => {
+                    html += `<div class="step">`;
+                    html += `<div class="step-number">Step ${idx + 1}</div>`;
+                    html += `<div class="result-content">${step}</div>`;
+                    html += `</div>`;
+                });
+                html += '</div>';
+                
+                resultArea.classList.remove('loading');
+                resultArea.innerHTML = html;
+                
+            } catch (error) {
+                resultArea.classList.remove('loading');
+                resultArea.innerHTML = `
+                    <div class="error-message">
+                        <strong>Error:</strong> ${error.message}
+                        <br><br>
+                        Please check your input format and try again.
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>
